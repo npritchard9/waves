@@ -1,16 +1,17 @@
 open Core
 
-module Wav_header = struct
+module Wav = struct
   type t = {
     num_channels : int;
     sample_rate : int;
     bits_per_sample : int;
     data_size : int;
+    samples : float array;
   }
   [@@deriving show]
 end
 
-open Wav_header
+open Wav
 
 let read_u16_le ic =
   let bytes = Bytes.create_local 2 in
@@ -24,6 +25,22 @@ let read_u32_le ic =
   lor (Char.to_int (Bytes.get bytes 1) lsl 8)
   lor (Char.to_int (Bytes.get bytes 2) lsl 16)
   lor (Char.to_int (Bytes.get bytes 3) lsl 24)
+
+let read_pcm_data data_size ic =
+  let pcm_bytes = Bytes.create data_size in
+  let _ = In_channel.really_input ic ~buf:pcm_bytes ~pos:0 ~len:data_size in
+  pcm_bytes
+
+let bytes_to_raw_vals pcm_bytes =
+  let len = Bytes.length pcm_bytes in
+  Array.init len ~f:(fun i -> Char.to_int (Bytes.get pcm_bytes i))
+
+let normalize_raw_vals pcms =
+  Array.map pcms ~f:(fun v -> (Float.of_int @@ (v - 128)) /. 128.0)
+
+let write_to_csv samples =
+  Out_channel.with_file "output.csv" ~f:(fun oc ->
+      Array.iteri samples ~f:(fun i sample -> fprintf oc "%d,%.6f\n" i sample))
 
 let parse_wav filename =
   In_channel.with_file filename ~binary:true ~f:(fun ic ->
@@ -70,5 +87,8 @@ let parse_wav filename =
             find_data ic
       in
       let data_size = find_data ic in
+      let samples =
+        read_pcm_data data_size ic |> bytes_to_raw_vals |> normalize_raw_vals
+      in
 
-      { num_channels; sample_rate; bits_per_sample; data_size })
+      { num_channels; sample_rate; bits_per_sample; data_size; samples })

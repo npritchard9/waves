@@ -1,3 +1,4 @@
 open Waves
 
-let () = Wav_data.read_data "inputs/thermo.wav"
+let () =
+  Read_wav.parse_wav "inputs/thermo.wav" |> Read_wav.Wav.show |> print_endline
