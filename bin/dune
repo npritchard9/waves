@@ -1,0 +1,4 @@
+(executable
+ (public_name waves)
+ (name main)
+ (libraries waves core))
