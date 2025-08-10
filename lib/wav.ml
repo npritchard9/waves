@@ -9,6 +9,17 @@ module Wav = struct
     samples : float array;
   }
   [@@deriving show]
+
+  let min_max_amplitude wav =
+    Array.fold wav.samples ~init:(Float.infinity, Float.neg_infinity)
+      ~f:(fun (min_a, max_a) sample ->
+        (Float.min min_a sample, Float.max max_a sample))
+
+  let root_mean_square wav =
+    let sum_sq =
+      Array.fold wav.samples ~init:0. ~f:(fun acc x -> acc +. (x *. x))
+    in
+    sqrt (sum_sq /. (Float.of_int @@ Array.length wav.samples))
 end
 
 open Wav
@@ -90,5 +101,6 @@ let parse_wav filename =
       let samples =
         read_pcm_data data_size ic |> bytes_to_raw_vals |> normalize_raw_vals
       in
+      (* write_to_csv samples; *)
 
       { num_channels; sample_rate; bits_per_sample; data_size; samples })
